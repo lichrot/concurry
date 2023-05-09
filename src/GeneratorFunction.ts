@@ -6,7 +6,8 @@ import {
   GeneratorYieldTuple,
 } from './types';
 
-const GeneratorFunctionConstructor = function* () {}.constructor as GeneratorFunctionConstructor;
+// prettier-ignore
+const GeneratorFunctionConstructor = (function* () {}).constructor as GeneratorFunctionConstructor;
 
 export class GeneratorFunction extends GeneratorFunctionConstructor {
   static *allSettled<T extends Generator[]>(
@@ -38,11 +39,12 @@ export class GeneratorFunction extends GeneratorFunctionConstructor {
 
           settledGenCount += 1;
           genYields[idx] = undefined;
-          genReturns[idx] = { status: 'return', value: iterResult.value };
+          genReturns[idx] = { status: 'fulfilled', value: iterResult.value };
+
         } catch (error) {
           settledGenCount += 1;
           genYields[idx] = undefined;
-          genReturns[idx] = { status: 'throw', reason: error };
+          genReturns[idx] = { status: 'rejected', reason: error };
         }
       }
 
@@ -152,11 +154,11 @@ export class GeneratorFunction extends GeneratorFunctionConstructor {
     }
   }
 
-  static *return<T>(value: T): Generator<never, T, never> {
+  static *resolve<T>(value: T): Generator<never, T, never> {
     return value;
   }
 
-  static *throw(reason: any): Generator<never, never, never> {
+  static *reject(reason: any): Generator<never, never, never> {
     throw reason;
   }
 }

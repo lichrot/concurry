@@ -6,8 +6,8 @@ import {
   GeneratorYieldTuple,
 } from './types';
 
-const AsyncGeneratorFunctionConstructor = async function* () {}
-  .constructor as AsyncGeneratorFunctionConstructor;
+// prettier-ignore
+const AsyncGeneratorFunctionConstructor = (async function* () {}).constructor as AsyncGeneratorFunctionConstructor;
 
 export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
   static async *allSettled<T extends AsyncGenerator[]>(
@@ -26,7 +26,7 @@ export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
     let genArgs: GeneratorNextArgTuple<T> | null = null;
 
     while (true) {
-      const promises = generators.map((gen, idx) => gen.next(genArgs?.[idx]));
+      const promises = generators.map((gen, idx) => genReturns[idx] ? null : gen.next(genArgs?.[idx]));
       const promiseResults = await Promise.allSettled(promises);
 
       const genYields = new Array(genCount) as GeneratorYieldTuple<T>;
@@ -40,11 +40,11 @@ export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
         const promiseResult = promiseResults[idx];
         if (promiseResult.status === 'rejected') {
           settledGenCount += 1;
-          genReturns[idx] = { status: 'throw', reason: promiseResult.reason };
+          genReturns[idx] = promiseResult;
           continue;
         }
 
-        const iterResult = promiseResult.value;
+        const iterResult = promiseResult.value!;
         if (iterResult.done !== true) {
           genYields[idx] = iterResult.value;
           continue;
@@ -52,7 +52,7 @@ export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
 
         settledGenCount += 1;
         genYields[idx] = undefined;
-        genReturns[idx] = { status: 'return', value: iterResult.value };
+        genReturns[idx] = { status: 'fulfilled', value: iterResult.value };
       }
 
       if (settledGenCount === genCount) break;
@@ -75,7 +75,7 @@ export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
     let genArgs: GeneratorNextArgTuple<T> | null = null;
 
     while (true) {
-      const promises = generators.map((gen, idx) => gen.next(genArgs?.[idx]));
+      const promises = generators.map((gen, idx) => genStatuses[idx] ? null : gen.next(genArgs?.[idx]));
       const iterResults = await Promise.all(promises);
 
       const genYields = new Array(genCount) as GeneratorYieldTuple<T>;
@@ -86,7 +86,7 @@ export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
           continue;
         }
 
-        const iterResult = iterResults[idx];
+        const iterResult = iterResults[idx]!;
         if (iterResult.done !== true) {
           genYields[idx] = iterResult.value;
           continue;
@@ -123,7 +123,7 @@ export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
     let genArgs: GeneratorNextArgTuple<T> | null = null;
 
     while (true) {
-      const promises = generators.map((gen, idx) => gen.next(genArgs?.[idx]));
+      const promises = generators.map((gen, idx) => genErrors[idx] ? null : gen.next(genArgs?.[idx]));
 
       // TODO: More efficient algo to deal with each promise as they resolve
       // instead of awaiting all promises if fast track fails (too lazy, can't do)
@@ -132,7 +132,8 @@ export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
       // Fast track
       try {
         const iterAnyResult = await Promise.any(promises);
-        if (iterAnyResult.done === true) return iterAnyResult.value;
+        if (iterAnyResult?.done === true) return iterAnyResult.value;
+
       } catch (error: any) {
         const errors = (error as AggregateError).errors;
         throw new AggregateError(errors, this.errorMessage);
@@ -156,7 +157,7 @@ export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
           continue;
         }
 
-        const iterResult = promiseResult.value;
+        const iterResult = promiseResult.value!;
         if (iterResult.done === true) return iterResult.value;
         genYields[idx] = iterResult.value;
       }
@@ -210,11 +211,11 @@ export class AsyncGeneratorFunction extends AsyncGeneratorFunctionConstructor {
     }
   }
 
-  static async *return<T>(value: T): AsyncGenerator<never, T, never> {
+  static async *resolve<T>(value: T): AsyncGenerator<never, T, never> {
     return value;
   }
 
-  static async *throw(reason: any): AsyncGenerator<never, never, never> {
+  static async *reject(reason: any): AsyncGenerator<never, void, never> {
     throw reason;
   }
 }

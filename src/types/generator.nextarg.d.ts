@@ -10,4 +10,4 @@ export type GeneratorNextArgType<T extends Generator | AsyncGenerator> = T exten
 
 export type GeneratorNextArgTuple<T extends Generator[] | AsyncGenerator[]> = {
   [key in keyof T]: GeneratorNextArgType<T[key]>;
-};
+} | undefined;
