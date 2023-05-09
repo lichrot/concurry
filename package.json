@@ -1,0 +1,20 @@
+{
+  "name": "concurry",
+  "description": "Promise-style concurrency for generator functions",
+  "version": "0.2.1",
+  "author": "Jørgen Tau",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsup src/index.ts --watch",
+    "build": "tsup src/index.ts --dts --minify --format cjs,esm",
+    "lint": "tsc"
+  },
+  "devDependencies": {
+    "prettier": "^2.8.8",
+    "tsup": "^6.7.0",
+    "typescript": "latest"
+  }
+}
